@@ -12,10 +12,15 @@ layout: default
   <div class="hero-slides" aria-hidden="true">
     {% if hero_slides and hero_slides.size > 0 %}
       {% for slide in hero_slides %}
-        <div class="hero-slide{% if forloop.first %} is-active{% endif %}" title="{{ slide.alt | escape }}" style="background-image: url('{{ slide.image | prepend: site.baseurl }}');"></div>
+        {% if forloop.first %}
+        <div class="hero-slide is-active" title="{{ slide.alt | escape }}" data-url="{{ slide.url }}" style="background-image: url('{{ slide.image | prepend: site.baseurl }}');"></div>
+        {% else %}
+        {% comment %} Deferred: JS sets the background from data-bg just before the slide is shown. {% endcomment %}
+        <div class="hero-slide" title="{{ slide.alt | escape }}" data-url="{{ slide.url }}" data-bg="{{ slide.image | prepend: site.baseurl }}"></div>
+        {% endif %}
       {% endfor %}
     {% else %}
-      <div class="hero-slide is-active" style="background-image: url('{{ site.hero_image | prepend: site.baseurl }}');"></div>
+      <div class="hero-slide is-active" data-url="" style="background-image: url('{{ site.hero_image | prepend: site.baseurl }}');"></div>
     {% endif %}
   </div>
 
@@ -24,6 +29,8 @@ layout: default
     <p class="fs-4">{{ site.description }}</p>
     <a href="{{ "/datasets" | relative_url }}" class="btn btn-primary btn-lg" role="button">Browse all datasets</a>
   </div>
+
+  <a class="hero-caption" data-hook="hero-caption" href="#" hidden>View related dataset<span aria-hidden="true"> &rarr;</span></a>
 
   {% if hero_slides and hero_slides.size > 1 %}
   <div class="hero-dots" role="group" aria-label="Hero image slideshow controls">
@@ -57,15 +64,42 @@ layout: default
 
     var slides = Array.prototype.slice.call(hero.querySelectorAll('.hero-slide'));
     var dots = Array.prototype.slice.call(hero.querySelectorAll('.hero-dot'));
-    if (slides.length < 2) return; // nothing to rotate
+    var caption = hero.querySelector('[data-hook="hero-caption"]');
 
     var INTERVAL = 6000;
     var current = 0;
     var timer = null;
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // Lazy-load: only the first slide's image is in the HTML. Every other
+    // slide keeps its URL in data-bg and is fetched just before it is shown,
+    // so the homepage doesn't download all hero images up front.
+    function loadSlide(i) {
+      var s = slides[i];
+      if (s && s.dataset.bg) {
+        s.style.backgroundImage = "url('" + s.dataset.bg + "')";
+        delete s.dataset.bg;
+      }
+    }
+
+    // Point the "View related dataset" link at the active slide's URL, or hide
+    // it when that slide has no linked dataset.
+    function updateCaption() {
+      if (!caption) return;
+      var url = slides[current] && slides[current].getAttribute('data-url');
+      if (url) {
+        caption.setAttribute('href', url);
+        caption.hidden = false;
+      } else {
+        caption.removeAttribute('href');
+        caption.hidden = true;
+      }
+    }
+
     function show(index) {
       current = (index + slides.length) % slides.length;
+      loadSlide(current);                             // ensure this slide's image is loaded
+      loadSlide((current + 1) % slides.length);       // preload the next one
       slides.forEach(function (slide, i) {
         slide.classList.toggle('is-active', i === current);
       });
@@ -78,7 +112,13 @@ layout: default
           dot.removeAttribute('aria-current');
         }
       });
+      updateCaption();
     }
+
+    updateCaption(); // set the link for the first slide on load
+    if (slides.length < 2) return; // single image: nothing to rotate
+
+    loadSlide(1); // preload the upcoming slide so the first crossfade is smooth
 
     function next() { show(current + 1); }
 

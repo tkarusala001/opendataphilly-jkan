@@ -109,6 +109,32 @@ input[data-hook=search-query] {
   text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
 }
 
+.hero-caption {
+  position: absolute;
+  z-index: 3;
+  left: 1.25rem;
+  bottom: 1rem;
+  display: inline-flex;
+  align-items: center;
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  background: rgba(20, 25, 28, .6);
+  color: #fff;
+  font-size: .85rem;
+  text-decoration: none;
+}
+
+.hero-caption:hover,
+.hero-caption:focus {
+  background: rgba(20, 25, 28, .82);
+  color: #fff;
+  text-decoration: underline;
+}
+
+.hero-caption[hidden] {
+  display: none;
+}
+
 .hero-dots {
   position: absolute;
   z-index: 3;
